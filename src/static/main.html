@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion AI Assistant</title>
+    <style>
+        :root {
+            --background-color: #343541;
+            --chat-background-color: #444654;
+            --text-color: #ececf1;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --accent-color: #10a37f;
+            --accent-hover-color: #0d8a6a;
+            --icon-color: #acacbe;
+            --user-msg-bg: #40414f;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { height: 100%; overflow: hidden; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .chat-container {
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--background-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 16px;
+            background-color: var(--background-color);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .chat-header h1 { font-size: 1.2rem; }
+        
+        .clear-chat-btn {
+            position: absolute; top: 50%; right: 16px; transform: translateY(-50%);
+            background: none; border: 1px solid var(--border-color); color: var(--icon-color);
+            width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+            font-size: 1.2rem; transition: background-color 0.2s;
+        }
+        .clear-chat-btn:hover { background-color: var(--chat-background-color); }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .chat-messages::-webkit-scrollbar { width: 8px; }
+        .chat-messages::-webkit-scrollbar-track { background: var(--background-color); }
+        .chat-messages::-webkit-scrollbar-thumb { background-color: var(--chat-background-color); border-radius: 4px; }
+
+        /* --- CHANGE 2: User prompt on the right --- */
+        .message {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.3s ease-out;
+            max-width: 90%;
+        }
+        .message.bot {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .message.user {
+            flex-direction: row-reverse;
+            margin-left: auto;
+            margin-right: 0;
+        }
+        /* --- End of CHANGE 2 --- */
+
+        .message.user .message-content-wrapper {
+            background-color: var(--user-msg-bg);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        
+        .message-avatar {
+            width: 32px; height: 32px; border-radius: 4px; display: flex;
+            align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;
+        }
+        .message.user .message-avatar { background-color: #7b68ee; }
+        .message.bot .message-avatar { background-color: var(--accent-color); }
+        
+        .message-content-wrapper { flex: 1; }
+        .message-sender { font-weight: bold; margin-bottom: 8px; }
+        .message-content { line-height: 1.6; }
+        .message-image img { max-width: 250px; border-radius: 8px; margin-top: 8px; }
+        .fashion-items-grid, .query-results-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px; margin-top: 16px;
+        }
+        .result-item-card {
+            background-color: var(--chat-background-color); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 12px; display: flex; align-items: center;
+            gap: 12px; transition: background-color 0.2s;
+        }
+        .result-item-card:hover { background-color: #505264; }
+        .item-image {
+            width: 70px; height: 70px; border-radius: 8px; object-fit: contain;
+            background-color: #343541; padding: 4px; cursor: pointer;
+        }
+        .item-info { flex-grow: 1; }
+        .item-name { font-weight: 500; }
+        .item-type { font-size: 0.8rem; color: var(--icon-color); }
+        .item-actions { display: flex; gap: 8px; }
+        .icon-btn {
+            background: none; border: 1px solid var(--border-color); color: var(--icon-color);
+            width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .icon-btn:hover { background-color: var(--background-color); color: var(--text-color); }
+        .icon-btn.liked { border-color: var(--accent-color); color: var(--accent-color); }
+
+        .refine-container { margin-top: 16px; text-align: left; }
+        .refine-search-btn {
+            background-color: var(--accent-color); color: white; border: none;
+            padding: 10px 16px; border-radius: 8px; cursor: pointer;
+            display: none; font-weight: 500; transition: background-color 0.2s;
+        }
+        .refine-search-btn:hover { background-color: var(--accent-hover-color); }
+        
+        .chat-input-area {
+            padding: 24px; border-top: 1px solid var(--border-color);
+            background-color: var(--background-color); flex-shrink: 0;
+            position: relative;
+        }
+        .input-form-wrapper { max-width: 800px; margin: 0 auto; position: relative;}
+        
+        .text-input {
+            width: 100%; background-color: var(--chat-background-color); color: var(--text-color);
+            border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 14px 90px 14px 50px; font-size: 1rem; outline: none;
+            transition: border-color 0.2s; resize: none;
+        }
+        .text-input:focus { border-color: var(--accent-color); }
+
+        .file-input { display: none; }
+        .file-btn { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); }
+        .send-btn {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            background-color: var(--accent-color); color: white;
+        }
+        .send-btn:disabled { background-color: #555; cursor: not-allowed; }
+
+        .query-image-preview {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            background-color: var(--chat-background-color); border: 1px solid var(--border-color);
+            padding: 8px; border-radius: 8px; display: none; align-items: center; gap: 10px;
+            animation: fadeInUp 0.2s; max-width: 300px;
+        }
+        .query-image-preview img { width: 40px; height: 40px; border-radius: 4px; }
+
+        .typing-indicator span { animation: typing-blink 1s infinite; }
+        @keyframes typing-blink { 50% { opacity: 0.5; } }
+
+        .image-popup {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none; justify-content: center;
+            align-items: center; z-index: 1000;
+        }
+        .image-popup img { max-width: 90%; max-height: 90%; border-radius: 12px; }
+        .close-popup {
+            position: absolute; top: 20px; right: 20px; background: white; border: none;
+            border-radius: 50%; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <header class="chat-header"><h1>Fashion AI Assistant</h1><button class="clear-chat-btn" onclick="clearChat()" title="Xóa đoạn chat">🗑️</button></header>
+        <main class="chat-messages" id="chat-messages"></main>
+        <footer class="chat-input-area">
+            <div class="input-form-wrapper">
+                <div class="query-image-preview" id="query-image-preview"><img id="preview-img" src=""><span>Hỏi về ảnh này...</span><button class="icon-btn" onclick="removeSelectedQueryImage()" title="Bỏ chọn ảnh">×</button></div>
+                <div class="input-form">
+                    <input type="file" class="file-input" id="file-input" accept="image/*">
+                    <button class="icon-btn file-btn" onclick="document.getElementById('file-input').click()" title="Đính kèm ảnh">📎</button>
+                    <input type="text" class="text-input" placeholder="Hỏi về thời trang hoặc gửi ảnh..." id="text-input">
+                    <button class="icon-btn send-btn" onclick="sendMessage()" id="send-btn" title="Gửi">➤</button>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <div class="image-popup" id="image-popup"><button class="close-popup" onclick="closeImagePopup()">×</button><img id="popup-image" src=""></div>
+
+    <script>
+        let isProcessing = false;
+        let baseText = null;
+        let likedImages = [];
+        let selectedQueryImage = null;
+        const chatMessages = document.getElementById('chat-messages');
+
+        document.getElementById('text-input').addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleImageUpload(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+
+        function sendMessage() {
+            if (isProcessing) return;
+            const textInput = document.getElementById('text-input');
+            const message = textInput.value.trim();
+
+            if (selectedQueryImage) {
+                const imgElement = `<img src="data:image/png;base64,${selectedQueryImage}" style="width: 40px; height: 40px; vertical-align: middle; margin-right: 8px; border-radius: 4px;">`;
+                addMessage('user', `${imgElement} ${message || ''}`);
+                queryWithImageAndText(message, selectedQueryImage);
+            } else if (message) {
+                addMessage('user', message);
+                queryText(message);
+            }
+            textInput.value = '';
+        }
+
+        function handleImageUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                addMessage('user', `<div class="message-image"><img src="${e.target.result}" alt="Uploaded image"></div>`);
+                analyzeImage(file);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        async function fetchAPI(endpoint, options) {
+            isProcessing = true;
+            toggleInput(false);
+            addTypingIndicator();
+            try {
+                const response = await fetch(endpoint, options);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: response.statusText || 'Lỗi không xác định từ máy chủ.' }));
+                    throw new Error(errorData.detail);
+                }
+                return await response.json();
+            } catch (error) {
+                addMessage('bot', `❌ Đã xảy ra lỗi: ${error.message}`);
+                console.error(`Error fetching ${endpoint}:`, error);
+                return null;
+            } finally {
+                isProcessing = false;
+                toggleInput(true);
+                removeTypingIndicator();
+            }
+        }
+
+        async function analyzeImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const result = await fetchAPI('/analyze', { method: 'POST', body: formData });
+            if (result && result.success) addFashionResultMessage(result);
+        }
+
+        async function queryText(text) {
+            const result = await fetchAPI('/query_text', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            if (result && result.success) {
+                baseText = result.query || text;
+                addQueryResultMessage(result);
+            }
+        }
+
+        async function queryWithImageAndText(text, imageB64) {
+            const result = await fetchAPI('/query_image_text', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, image_b64: imageB64 })
+            });
+            if (result && result.success) {
+                baseText = result.query || text;
+                addQueryResultMessage(result);
+            }
+            removeSelectedQueryImage();
+        }
+        
+        async function refineSearch() {
+            const userFeedback = prompt("Mô tả thêm để tôi tinh chỉnh kết quả? (VD: 'có cổ bẻ', 'màu xanh navy'...). Bỏ trống nếu chỉ tìm theo ảnh đã thích.", "");
+            if (userFeedback === null) return;
+            const payload = { base_query: baseText, feedback_text: userFeedback.trim() || null, liked_images: likedImages };
+            const result = await fetchAPI('/query_refine', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (result && result.success) {
+                baseText = result.query || baseText;
+                addQueryResultMessage(result);
+            }
+        }
+
+        function addMessage(sender, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            const avatar = sender === 'user' ? '👤' : '🤖';
+            const senderName = sender === 'user' ? 'You' : 'Fashion AI';
+            
+            if(sender === 'user') {
+                 messageDiv.innerHTML = `
+                    <div class="message-content-wrapper"><div class="message-sender">${senderName}</div><div class="message-content">${content}</div></div>
+                    <div class="message-avatar">${avatar}</div>`;
+            } else {
+                 messageDiv.innerHTML = `
+                    <div class="message-avatar">${avatar}</div>
+                    <div class="message-content-wrapper"><div class="message-sender">${senderName}</div><div class="message-content">${content}</div></div>`;
+            }
+
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        function addFashionResultMessage(result) {
+            if (result.fashion_items.length === 0) {
+                 addMessage('bot', 'Tôi không tìm thấy trang phục nào trong ảnh. Bạn có thể thử một ảnh khác rõ ràng hơn.');
+                 return;
+            }
+            let itemsHtml = result.fashion_items.map(item => `
+                <div class="result-item-card">
+                    <img src="data:image/png;base64,${item.item_png}" class="item-image" onclick="viewImagePopup(this.src)">
+                    <div class="item-info"><div class="item-name">${item.name_vi}</div><div class="item-type">${item.name}</div></div>
+                    <div class="item-actions"><button class="icon-btn" title="Dùng ảnh này để tìm kiếm" onclick='selectImageForQuery("${item.item_png}")'>↩️</button></div>
+                </div>`).join('');
+            addMessage('bot', `🎯 Tôi đã phân tích và tìm thấy ${result.total_items} món đồ:<div class="fashion-items-grid">${itemsHtml}</div>`);
+        }
+
+        function addQueryResultMessage(result) {
+            // CHANGE 1: Fix refine button duplication
+            const oldRefineContainer = document.querySelector('.refine-container');
+            if (oldRefineContainer) {
+                oldRefineContainer.remove();
+            }
+            // End of CHANGE 1
+            
+            likedImages = [];
+            let itemsHtml = result.results.map(item => `
+                <div class="result-item-card">
+                    <img src="data:image/png;base64,${item.image_b64}" class="item-image" onclick="viewImagePopup(this.src)">
+                    <div class="item-info"><div class="item-name">Gợi ý sản phẩm</div><div class="item-type">${item.label}</div></div>
+                    <div class="item-actions">
+                        <button class="icon-btn like-btn" title="Thích" data-image-b64="${item.image_b64}" onclick="toggleLike(event)">🤍</button>
+                        <button class="icon-btn" title="Dùng ảnh này để tìm kiếm" onclick='selectImageForQuery("${item.image_b64}")'>↩️</button>
+                    </div>
+                </div>`).join('');
+            
+            const refineButtonHtml = `<div class="refine-container"><button class="refine-search-btn" id="refine-btn" onclick="refineSearch()">Tinh chỉnh tìm kiếm</button></div>`;
+            addMessage('bot', `🔍 Đây là kết quả cho "${result.query}":<div class="query-results-grid">${itemsHtml}</div>${refineButtonHtml}`);
+            updateRefineBtn();
+        }
+
+        function toggleLike(event) {
+            const btn = event.currentTarget;
+            if (btn.classList.contains('liked')) {
+                likedImages = likedImages.filter(b64 => b64 !== btn.dataset.imageB64);
+                btn.classList.remove('liked'); btn.innerHTML = '🤍';
+            } else {
+                likedImages.push(btn.dataset.imageB64);
+                btn.classList.add('liked'); btn.innerHTML = '❤️';
+            }
+            updateRefineBtn();
+        }
+
+        function updateRefineBtn() {
+            const refineBtn = document.getElementById('refine-btn');
+            if (refineBtn) refineBtn.style.display = likedImages.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        function addTypingIndicator() {
+            if (document.getElementById('typing-indicator')) return;
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'message bot';
+            typingDiv.innerHTML = `<div class="message-avatar">🤖</div><div class="message-content-wrapper"><div class="message-sender">Fashion AI</div><div class="message-content typing-indicator"><span>Đang xử lý...</span></div></div>`;
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+        function removeTypingIndicator() { document.getElementById('typing-indicator')?.remove(); }
+        function toggleInput(enabled) {
+            document.getElementById('text-input').disabled = !enabled;
+            document.getElementById('send-btn').disabled = !enabled;
+            document.querySelector('.file-btn').disabled = !enabled;
+        }
+        function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+        function clearChat() { chatMessages.innerHTML = ''; isProcessing = false; baseText = null; likedImages = []; selectedQueryImage = null; removeSelectedQueryImage(); toggleInput(true); }
+        function viewImagePopup(src) { document.getElementById('popup-image').src = src; document.getElementById('image-popup').style.display = 'flex'; }
+        function closeImagePopup() { document.getElementById('image-popup').style.display = 'none'; }
+        function selectImageForQuery(imageB64) {
+            selectedQueryImage = imageB64;
+            document.getElementById('preview-img').src = `data:image/png;base64,${imageB64}`;
+            document.getElementById('query-image-preview').style.display = 'flex';
+            document.getElementById('text-input').focus();
+        }
+        function removeSelectedQueryImage() { selectedQueryImage = null; document.getElementById('query-image-preview').style.display = 'none'; }
+    </script>
+</body>
+</html>
